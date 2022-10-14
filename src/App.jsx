@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { nanoid } from 'nanoid';
 
 //COMPONENTS
@@ -7,72 +7,57 @@ import ContactForm from 'components/ContactForm';
 import ContactList from './components/ContactList';
 import Filter from './components/Filter';
 
-export default class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
-  };
+export default function App() {
+  const [contacts, setContacts] = useState(() => {
+    const contacts = JSON.parse(localStorage.getItem('contacts'));
+    return contacts ?? [];
+  });
 
-  componentDidMount() {
-    // розпарсимо значення JSON.parse зі сховища запис localStorage.getItem з ключем contacts.
-	  const contacts = JSON.parse(localStorage.getItem('contacts'));
-	//Якщо contacts
-    if (contacts?.length) { // = contacts && contacts.length or contacts.length !== 0
-      this.setState({
-        contacts, // == contacts : contacts
-      });
-    }
-  }
+  const [filter, setFilter] = useState('');
 
-  componentDidUpdate(prevProps, prevState) {
-    const { contacts } = this.state;
+  useEffect(() => {
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts])
+  
+  useEffect(() => {
+    return () => {
+      localStorage.removeItem('contacts');
+    };
+  }, []);
 
-    //Перевіряємо чи попередні state змінилися, якщо так - то додаємо його до localStorage
-    if (prevState.contacts !== contacts) {
-      localStorage.setItem('contacts', JSON.stringify(contacts));
-    }
-  }
-
-  addContact = contact => {
-    if (this.isDublicate(contact)) {
+  const addContact = contact => {
+    if (isDublicate(contact)) {
       return alert(`${contact.name} - is already in contacts`);
     }
-    this.setState(prev => {
+    setContacts(prev => {
       const newContact = {
         id: nanoid(),
         ...contact,
       };
-      return {
-        contacts: [...prev.contacts, newContact],
-      };
+      return [...prev, newContact];
     });
   };
 
-  removeContact = id => {
-    this.setState(prev => {
-      const newContact = prev.contacts.filter(item => item.id !== id);
-      return {
-        contacts: newContact,
-      };
+  const removeContact = id => {
+    setContacts(prev => {
+      const newContact = prev.filter(item => item.id !== id);
+      return newContact;
     });
   };
 
-  onChangeFilter = e => {
-    const { name, value } = e.target;
-    this.setState({
-      [name]: value,
-    });
+  const onChangeFilter = e => {
+    const { value } = e.target;
+    setFilter(value);
   };
-  isDublicate({ name, number }) {
-    const { contacts } = this.state;
+
+  const isDublicate = ({ name, number }) => {
     const result = contacts.find(
       item => item.name === name && item.number === number
     );
     return result;
-  }
-  getFiltredContacts() {
-    const { contacts, filter } = this.state;
+  };
 
+  const getFiltredContacts = () => {
     if (!filter) {
       return contacts;
     }
@@ -83,27 +68,21 @@ export default class App extends Component {
       return result;
     });
     return filtredContacts;
-  }
+  };
+  const filtredContacts = getFiltredContacts();
+  const length = contacts.length;
 
-  render() {
-    const { addContact, onChangeFilter, removeContact } = this;
-    const { filter } = this.state;
-    const contacts = this.getFiltredContacts();
-    const length = this.state.contacts.length;
-
-    return (
-      <Section title={'Task - 2 Contact book'}>
-        <h1>Phonebook</h1>
-        <ContactForm onSubmit={addContact} />
-        <h1>Contacts</h1>
-        <Filter onChangeFilter={onChangeFilter} filter={filter} />
-        {length > 0 ? (
-          <ContactList items={contacts} removeContact={removeContact} />
-        ) : (
-          <p>Contact list is empty.</p>
-        )}
-      </Section>
-    );
-  }
+  return (
+    <Section title={'Task - 2 Contact book'}>
+      <h1>Phonebook</h1>
+      <ContactForm onSubmit={addContact} />
+      <h1>Contacts</h1>
+      <Filter onChangeFilter={onChangeFilter} filter={filter} />
+      {length > 0 ? (
+        <ContactList items={filtredContacts} removeContact={removeContact} />
+      ) : (
+        <p>Contact list is empty.</p>
+      )}
+    </Section>
+  );
 }
-//Task 3
